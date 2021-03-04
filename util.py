@@ -5,6 +5,14 @@ import sympy
 from itertools import combinations, permutations
 
 
+def LoadSingleTestExample(input):
+    c, A, b = input["c"], input["A"], input["b"]
+    n_variables = len(c)
+    for constraint_coeff in A:
+        assert len(constraint_coeff) == n_variables
+    assert len(b) == len(A)
+    return c, A, b
+
 
 def ReducedRowEchelonForm(nparr):
     r"""
@@ -34,9 +42,6 @@ def ReducedRowEchelonForm(nparr):
     return np.array(rref_val)
 
 
-
-
-
 class Pivoting:
     def __init__(self):
         pass
@@ -51,7 +56,7 @@ class Pivoting:
     def run(self):   
         nrow, ncol = np.shape(self.nparr)       
         newRowID = self._rowsort()
-        
+
         rowptr = 1
         
         if (rowptr == nrow):
@@ -71,7 +76,6 @@ class Pivoting:
                 self.nparr[cur_rowID] = cur_row             
                 # Resort
                 newRowID = self._rowsort()
-
                 pass
             
             else:
@@ -84,14 +88,6 @@ class Pivoting:
         
 
     def _rowsort(self):
-        r"""
-        do the row switching, to make sure that 
-
-        Returns
-        -------
-        None.
-
-        """
         firstNoneZeroIndice = np.zeros((self.nrow), dtype=np.int64)
         
         for rowId in range(self.nrow):
@@ -115,11 +111,16 @@ class Pivoting:
         
         return first_nonzero_idx
     
-    
 
+class SimplexCore():    
+    def __init__(self):
+        pass
 
-class Simplex():    
-    def __init__(self, c, A, b):
+    def __call__(self, c, A, b):
+        self.init(c, A, b)
+        self.alg()
+
+    def init(self, c, A, b):
         self.c = np.asmatrix(c).reshape(-1,1)
         self.A = np.asmatrix(A)
         self.b = np.asmatrix(b).reshape(-1,1)
@@ -136,26 +137,29 @@ class Simplex():
         
         self.solution = None
         self.optimal_value = None
+        self.foundBFS = None
 
         ## Some constants
         # The floating computation error allowance
         self.EPS = 1e-7
         
-        print("======== Standform =========\n")
-        print("c.T")
-        print(self.c)
-        print("\n")
+        #print("======== Standform =========\n")
+        #print("c.T")
+        #print(self.c)
+        #print("\n")
         
-        print("self.A")
-        print(self.A)
-        print("\n")
+        #print("self.A")
+        #print(self.A)
+        #print("\n")
         
-        print("self.b")
-        print(self.b)
-        print("\n")
+        #print("self.b")
+        #print(self.b)
+        #print("\n")
     
     def alg(self):               
         basic_variables, nonbasic_variables = self.find_BFS()
+        if not self.foundBFS:
+            return
         x_solution = np.asmatrix(np.zeros((self.n_variables,1), dtype=np.float))
         
         while(True):
@@ -197,8 +201,7 @@ class Simplex():
                     ratio = x_basic / Binv_Nj
                     ratio[Binv_Nj_negative_mask,:] = np.Inf              
                     variable_to_leave_basis = basic_variables[np.argmin(ratio)]
-                    
-                    
+
                     basic_variables = np.setdiff1d(basic_variables, variable_to_leave_basis)
                     basic_variables = np.union1d(basic_variables, new_basis)
                     
@@ -232,14 +235,42 @@ class Simplex():
                 break
             
         if foundBFS == True:
+            self.foundBFS = True
             return basic_variables, nonbasic_variables
         else:
+            self.foundBFS = False
             self.solution_status = "infeasible"
             print("This problem is infeasible. Program exit.\n")
-            sys.exit()
+            return None, None
                 
             
     
+class Simplex():
+    def __init__(self):
+        self.pivoting = Pivoting()
+        self.simplex_core = SimplexCore()
+
+    def __call__(self, c, A, b):
+        self.c = c
+        self.A = A
+        self.b = b
+
+        A = np.array(A, dtype=float)
+        b = np.array(b, dtype=float).reshape(-1,1)
+        Ab = np.hstack([A, b])        
+    
+        # Pivoting the Ab matrix
+        Ab = self.pivoting(Ab)
+        # Make all b elements >= 0
+        for i in range(Ab.shape[0]):
+            if Ab[i,-1] < 0:
+                Ab[i,:] = -Ab[i,:]
+
+        A = Ab[:,:-1]
+        b = Ab[:,-1]
+        
+        self.simplex_core(c=c, A=A, b=b)
+        
     
     
     

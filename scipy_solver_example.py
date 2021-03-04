@@ -2,17 +2,20 @@
 import unittest
 import numpy as np
 from scipy.optimize import linprog
+import json
+from util import LoadSingleTestExample
 
-c = [1., -0.5, 2.4, 1.4, 0.48]
-A = [[5, 3, 5, 7.0, 0.32],
-     [1, 3, -2, 1.4, 2.1],
-     [1, 0, 0, 6, 1.6]]
-b = [2.2, 2.1, 1]  
-# b = [0.2, 2.1, 1]
+if __name__ == "__main__":
 
-n = len(c)
+    with open("test_examples.json", "r") as f:
+        test_data = json.load(f)
 
-x_bounds = [(0, None) for i in range(n)]
-res = linprog(c, A_eq=A, b_eq=b, bounds=x_bounds)
+    c, A, b = LoadSingleTestExample(test_data[3])
+    n = len(c)
 
-print(res)
+    x_bounds = [(0, None) for i in range(n)]
+    res = linprog(c, A_eq=A, b_eq=b, bounds=x_bounds)
+
+    print(res)
+
+    pass
