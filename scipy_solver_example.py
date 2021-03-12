@@ -10,7 +10,7 @@ if __name__ == "__main__":
     with open("test_examples.json", "r") as f:
         test_data = json.load(f)
 
-    c, A, b = LoadSingleTestExample(test_data[3])
+    c, A, b = LoadSingleTestExample(test_data[6])
     n = len(c)
 
     x_bounds = [(0, None) for i in range(n)]

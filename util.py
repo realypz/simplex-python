@@ -60,7 +60,7 @@ class Pivoting:
         rowptr = 1
         
         if (rowptr == nrow):
-            return 
+            return self.nparr
         
         while (rowptr < nrow):
             cur_rowID = newRowID[rowptr]
@@ -121,9 +121,9 @@ class SimplexCore():
         self.alg()
 
     def init(self, c, A, b):
-        self.c = np.asmatrix(c).reshape(-1,1)
-        self.A = np.asmatrix(A)
-        self.b = np.asmatrix(b).reshape(-1,1)
+        self.c = np.asmatrix(c, dtype=float).reshape(-1,1)
+        self.A = np.asmatrix(A, dtype=float)
+        self.b = np.asmatrix(b, dtype=float).reshape(-1,1)
         
         # Todo: Check c, A, b is the standard form of a linear program
         
@@ -136,12 +136,13 @@ class SimplexCore():
         self.solution_status = "not started"
         
         self.solution = None
+        self.degenerate = None
         self.optimal_value = None
         self.foundBFS = None
 
         ## Some constants
         # The floating computation error allowance
-        self.EPS = 1e-7
+        self.EPS = 0.0
         
         #print("======== Standform =========\n")
         #print("c.T")
@@ -173,7 +174,9 @@ class SimplexCore():
             if (reduced_cost < -self.EPS).sum() == 0:
                 # all the reduced cost is non-negative, this means we reach the optimal
                 x_basic = B_inv @ self.b
+                self.degenerate = self.check_degenerate(x_basic)
                 x_solution[basic_variables,:] = x_basic
+
                 self.solution = x_solution.reshape(-1,).tolist()
                 self.solution_status = "successful"
                 self.optimal_value = np.asscalar(self.c.T @ x_solution)
@@ -211,7 +214,7 @@ class SimplexCore():
     
     def DecideUnboundness(self, B_inv, Nj):
         tmp = B_inv @ Nj
-        mask = tmp < -self.EPS
+        mask = tmp <= -self.EPS
         
         if mask.sum() == self.m_constraints:
             return True  # unbounded
@@ -226,11 +229,15 @@ class SimplexCore():
         for basic_variables in basic_variables_all:
             nonbasic_variables = np.setdiff1d(self.VARIABLES, basic_variables)
             B = self.A[:, basic_variables]
+
+            # Todo: make sure B is not ill-conditioned
+            if np.linalg.matrix_rank(B) != self.m_constraints:
+                continue
             B_inv = np.linalg.inv(B) 
             x_basic = B_inv @ self.b
             
-            print("(x_basic > 0).sum() =", (x_basic > 0).sum())
-            if (x_basic > 0).sum() == self.m_constraints:
+            # print("(x_basic > 0).sum() =", (x_basic > 0).sum())
+            if (x_basic >= self.EPS).sum() == self.m_constraints:
                 foundBFS = True
                 break
             
@@ -242,7 +249,19 @@ class SimplexCore():
             self.solution_status = "infeasible"
             print("This problem is infeasible. Program exit.\n")
             return None, None
-                
+      
+    
+    def check_degenerate(self, xbasic: np.array):
+        """
+        An degenerate example:
+        http://www.columbia.edu/~cs2035/courses/ieor3608.F04/degeneracy.pdf
+        """
+        n_positive = (xbasic > self.EPS).sum()
+        if n_positive < xbasic.size:
+            return True
+        else:
+            return False
+
             
     
 class Simplex():
