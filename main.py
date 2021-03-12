@@ -26,11 +26,13 @@ if __name__ == "__main__":
     with open("test_examples.json", "r") as f:
         test_data = json.load(f)
     
-    standard_problem = test_data[5]
+    standard_problem = test_data[0]  # Todo: change the test example
     c, A, b = LoadSingleTestExample(standard_problem)
     
     simplex = Simplex()
     simplex(c, A, b)
+
+    print(simplex)
 
     pass
     

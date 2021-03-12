@@ -132,8 +132,8 @@ class SimplexCore():
         
         self.VARIABLES = np.arange(0, self.n_variables, 1)
 
-        # self.solution_status must be one of ["not started", "successful", "unbounded", "infeasible"]
-        self.solution_status = "not started"
+        # self.status must be one of ["not started", "successful", "unbounded", "infeasible"]
+        self.status = "not started"
         
         self.solution = None
         self.degenerate = None
@@ -178,7 +178,7 @@ class SimplexCore():
                 x_solution[basic_variables,:] = x_basic
 
                 self.solution = x_solution.reshape(-1,).tolist()
-                self.solution_status = "successful"
+                self.status = "successful"
                 self.optimal_value = np.asscalar(self.c.T @ x_solution)
                 break
             
@@ -192,7 +192,7 @@ class SimplexCore():
                 
                 # Is the problem unbounded?
                 if self.DecideUnboundness(B_inv, self.A[:,new_basis]) == True:
-                    self.solution_status = "unbounded"
+                    self.status = "unbounded"
                     print("Problem unbounded. algorithm terminated...")
                     break
                 else: # The prblem is boundedm then find a basic variable to unbounded... 
@@ -246,7 +246,7 @@ class SimplexCore():
             return basic_variables, nonbasic_variables
         else:
             self.foundBFS = False
-            self.solution_status = "infeasible"
+            self.status = "infeasible"
             print("This problem is infeasible. Program exit.\n")
             return None, None
       
@@ -262,6 +262,22 @@ class SimplexCore():
         else:
             return False
 
+    def __str__(self):
+        print_content = """number of variables: {n}
+number of constraints: {m}
+status: {status:s}
+solution: {solution}
+optimal value: {optimal_value:f}
+degenerate: {degenerate}
+found BFS: {foundBFS}""".format(m=self.m_constraints,
+                                n=self.n_variables,
+                                status=self.status, 
+                                degenerate=self.degenerate,
+                                solution=self.solution,
+                                optimal_value=self.optimal_value,
+                                foundBFS=self.foundBFS)
+
+        return print_content
             
     
 class Simplex():
@@ -280,6 +296,16 @@ class Simplex():
     
         # Pivoting the Ab matrix
         Ab = self.pivoting(Ab)
+
+        # delete the extra zero lines in Ab
+        for i_ in range(Ab.shape[0]):
+            i = Ab.shape[0] - 1 - i_
+            if (Ab[i,:] == 0.0).sum() == Ab.shape[1]:
+                Ab_tmp = np.delete(Ab, obj=i, axis=0)
+                Ab = Ab_tmp
+            else:
+                break
+
         # Make all b elements >= 0
         for i in range(Ab.shape[0]):
             if Ab[i,-1] < 0:
@@ -289,7 +315,11 @@ class Simplex():
         b = Ab[:,-1]
         
         self.simplex_core(c=c, A=A, b=b)
+
         
+        
+    def __str__(self):
+        return self.simplex_core.__str__()
     
     
     
